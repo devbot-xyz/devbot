@@ -1,13 +1,14 @@
 var Botkit = require('botkit');
 var os = require('os');
 var fuzzyset = require('fuzzyset.js');
+var env = require('./env.json')
 
 var controller = Botkit.slackbot({
     debug: true,
 });
 
 var bot = controller.spawn({
-    token: 'XXXX'
+    token: env.token
 }).startRTM();
 
 
@@ -16,74 +17,77 @@ var bot = controller.spawn({
 var initDb = require('./dbconfig/db.js');
 initDb(function () {
   var object = {};
+  var digiOceanPayload = {};
   var UserModel = require('./api/users/model.js');
   var getByUserid = require('./api/users/getByUserid.js');
-  var askCloudProvider = function(err, convo) {
-    convo.ask('What is your cloud provider?', function(response, convo) {
-      var resp = FuzzySet();
-      resp.add("digital ocean");
-
-      if (parseFloat(resp.get(response.text)) > 0.8) {
-        object.cloudProvider = response.text;
-        convo.say('Awesome.');
-        askAccessToken(response, convo);
-      } else {
-        convo.say('I dont think I heard you correctly.')
-        convo.repeat();
-      }
-      convo.next();
-    });
-  };
-  var askAccessToken = function(response, convo) {
-    convo.ask('Can you provide your access token?', function(response, convo) {
-      convo.say('Ok. cool. Your token is safe with us ! Dont worry')
-        object.token = response.text;
-        UserModel.create(object).then(function (task) {
-// access the newly created task via the variable task
-console.log('Inserted in db successfully')
-
-})
-      convo.next();
-    });
-  };
-
+  var pushToQueue = require('./rabbitmq/pushToQueue.js')
 
   controller.hears(['spinserver'], ['direct_message','direct_mention','message_received'], function(bot,message) {
+          object = {};
           object.userid = message.user;
           getByUserid(message.user, function(user) {
             if(user) {
               // Spin up the server
+
             } else {
               bot.startConversation(message, askCloudProvider);
             }
           })
   });
 
-  controller.hears(['show', 'shoe'], 'direct_message,direct_mention,mention', function(bot, message) {
+  controller.hears(['get', 'getDroplets'], 'direct_message,direct_mention,mention', function(bot, message) {
     getByUserid(message.user, function(user) {
       if(user) {
         // Show the server
+        console.log('LPLPLPDSLDPLPSLDLSPLD'+JSON.stringify(user))
+        digiOceanPayload.token = user[0].token;
+        digiOceanPayload.action = 'getDroplets'
+        pushToQueue('reactor.do',digiOceanPayload, function(err) {
+
+          console.log('ppppppppppppppppppppppppppppppppppppppppppppppp')
+          if (err) {
+            console.log(err)
+          }
+          if(!err) {
+            var say = function(err, convo) {
+              convo.say('Queued for process.Please wait.')
+            }
+            bot.startConversation(message, say);
+            console.log('-------PUBLISHED IN QUEUE---------')
+          }
+        })
       } else {
+        var askCloudProvider = function(err, convo) {
+          convo.ask('What is your cloud provider?', function(response, convo) {
+            var resp = FuzzySet();
+            resp.add("digital ocean");
+
+            if (parseFloat(resp.get(response.text)) > 0.8) {
+              object.cloudProvider = response.text;
+              convo.say('Awesome.');
+              askAccessToken(response, convo);
+            } else {
+              convo.say('I dont think I heard you correctly.')
+              convo.repeat();
+            }
+            convo.next();
+          });
+        };
+        var askAccessToken = function(response, convo) {
+          convo.ask('Can you provide your access token?', function(response, convo) {
+            convo.say('Ok. cool. Your token is safe with us ! Dont worry')
+              object.token = response.text;
+              UserModel.create(object).then(function (task) {
+                  // access the newly created task via the variable task
+                  console.log('Inserted in db successfully')
+
+      })
+            convo.next();
+          });
+        };
         bot.startConversation(message, askCloudProvider);
       }
     })
-    bot.api.reactions.add({
-        timestamp: message.ts,
-        channel: message.channel,
-        name: 'robot_face',
-    }, function(err, res) {
-        if (err) {
-            bot.botkit.log('Failed to add emoji reaction :(', err);
-        }
-    });
-
-    controller.storage.users.get(message.user, function(err, user) {
-        if (user && user.name) {
-            bot.reply(message, 'Hello ' + user.name + '!!' + ' I am there to assist you in your server');
-        } else {
-            bot.reply(message, 'Hello.' + ' I am there to assist you in server')
-        }
-    });
   });
 
 controller.hears(['hello', 'hi'], 'direct_message,direct_mention,mention', function(bot, message) {
