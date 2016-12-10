@@ -42,6 +42,7 @@ initDb(function () {
         console.log('LPLPLPDSLDPLPSLDLSPLD'+JSON.stringify(user))
         digiOceanPayload.token = user[0].token;
         digiOceanPayload.action = 'getDroplets'
+        digiOceanPayload.userid = message.user;
         pushToQueue('reactor.do',digiOceanPayload, function(err) {
 
           console.log('ppppppppppppppppppppppppppppppppppppppppppppppp')
