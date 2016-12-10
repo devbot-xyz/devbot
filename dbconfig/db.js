@@ -11,12 +11,11 @@ module.exports = function (cb) {
         idle: 10000
       },
       logging: console.log.bind(null, 'Sequelize:')
-    })
+    });
 
-
-  var Users = require('../api/users/model.js')
+  var Users = require('../api/users/model.js');
 
   sequelize.sync().then(
     cb
-  )
-}
+  );
+};

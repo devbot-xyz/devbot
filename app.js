@@ -1,18 +1,15 @@
 var Botkit = require('botkit');
 var os = require('os');
 var fuzzyset = require('fuzzyset.js');
-var env = require('./env.json')
+// var env = require('./env.json')
 
 var controller = Botkit.slackbot({
     debug: true,
 });
 
 var bot = controller.spawn({
-    token: env.token
+    token: process.env.SLACK_TOKEN
 }).startRTM();
-
-
-
 
 var initDb = require('./dbconfig/db.js');
 initDb(function () {
