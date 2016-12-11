@@ -8,7 +8,8 @@ var controller = Botkit.slackbot({
 });
 
 var bot = controller.spawn({
-    token: 'X'
+    token: process.env.SLACK_TOKEN
+  //  token: 'X'
 }).startRTM();
 
 var initDb = require('./dbconfig/db.js');
@@ -21,7 +22,7 @@ initDb(function () {
 
   controller.hears(['spinserver'], ['direct_message','direct_mention','message_received'], function(bot,message) {
           object = {};
-          object.userid = message.user;
+          object.channelId = message.channel;
           getByUserid(message.user, function(user) {
             if(!user) {
 
@@ -86,7 +87,22 @@ initDb(function () {
               };
               bot.startConversation(message, askCloudProvider);
             }
+            pushToQueue('reactor.do',object, function(err) {
+
+              console.log('ppppppppppppppppppppppppppppppppppppppppppppppp')
+              if (err) {
+                console.log(err)
+              }
+              if(!err) {
+                var say = function(err, convo) {
+                  convo.say('Queued for process.Please wait.')
+                }
+                bot.startConversation(message, say);
+                console.log('-------PUBLISHED IN QUEUE---------')
+              }
+
           })
+
   });
 
   controller.hears(['get', 'getDroplets'], 'direct_message,direct_mention,mention', function(bot, message) {
