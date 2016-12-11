@@ -4,7 +4,7 @@ var amqp = require('amqplib/callback_api');
 
 var pushToqueue = function (q, data, cb) {
   console.log('AShjashjkhaskjdhkashkdhk'+JSON.stringify(data))
-  amqp.connect('amqp://devbotuser:devbotpass@172.17.0.3:5672/', function(err, conn) {
+  amqp.connect('amqp://devbotuser:devbotpass@172.17.0.2:5672/', function(err, conn) {
     if (err) {
       console.log('ss')
       cb(err)
