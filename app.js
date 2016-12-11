@@ -8,7 +8,7 @@ var controller = Botkit.slackbot({
 });
 
 var bot = controller.spawn({
-    token: process.env.SLACK_TOKEN
+    token: 'X'
 }).startRTM();
 
 var initDb = require('./dbconfig/db.js');
@@ -23,10 +23,67 @@ initDb(function () {
           object = {};
           object.userid = message.user;
           getByUserid(message.user, function(user) {
-            if(user) {
-              // Spin up the server
+            if(!user) {
 
-            } else {
+              var askCloudProvider = function(err, convo) {
+                convo.ask('What is your cloud provider?', function(response, convo) {
+                  var resp = FuzzySet();
+                  resp.add("digital ocean");
+
+                  if (parseFloat(resp.get(response.text)) > 0.8) {
+                    object.cloudProvider = response.text;
+                    convo.say('Awesome.');
+                    askAccessToken(response, convo);
+                  } else {
+                    convo.say('I dont think I heard you correctly.')
+                    convo.repeat();
+                  }
+                  convo.next();
+                });
+              };
+              var askAccessToken = function(response, convo) {
+                convo.ask('Can you provide your access token?', function(response, convo) {
+                  convo.say('Ok. cool. Your token is safe with us ! Dont worry')
+                    object.token = response.text;
+                    UserModel.create(object).then(function (task) {
+                        // access the newly created task via the variable task
+                        console.log('Inserted in db successfully')
+                        askmachineName(response, convo);
+                      })
+                  convo.next();
+                });
+              };
+              var askmachineName = function(response, convo) {
+                convo.ask('Can you give me a kickass machine name you want to run?', function(response, convo) {
+                  convo.say('Thas awesome name')
+                    object.name = response.text;
+                    askRegion(response, convo)
+                  convo.next();
+                });
+              };
+              var askRegion = function(response, convo) {
+                convo.ask('Can you give me the region?', function(response, convo) {
+                  convo.say('Cool !')
+                    object.region = response.text;
+                    askSize(response, convo);
+                  convo.next();
+                });
+              };
+              var askSize = function(response, convo) {
+                convo.ask('Can you give me the size of RAM?', function(response, convo) {
+                  convo.say('Cool !')
+                    object.size = response.text;
+                    askImage(response,convo);
+                  convo.next();
+                });
+              };
+              var askImage = function(response, convo) {
+                convo.ask('Can you give me the image name?', function(response, convo) {
+                  convo.say('Awesome. !')
+                    object.image = response.text;
+                  convo.next();
+                });
+              };
               bot.startConversation(message, askCloudProvider);
             }
           })
@@ -39,7 +96,8 @@ initDb(function () {
         console.log('LPLPLPDSLDPLPSLDLSPLD'+JSON.stringify(user))
         digiOceanPayload.token = user[0].token;
         digiOceanPayload.action = 'getDroplets'
-        digiOceanPayload.userid = message.user;
+        console.log('xxx'+JSON.stringify(message))
+        digiOceanPayload.channelId = message.channel;
         pushToQueue('reactor.do',digiOceanPayload, function(err) {
 
           console.log('ppppppppppppppppppppppppppppppppppppppppppppppp')
